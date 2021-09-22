@@ -1,0 +1,109 @@
+---
+title: "10.1"
+author: "Maninder Ade"
+date: "03/09/2021"
+output: pdf_document
+---
+
+#############################################
+rm(list = ls())
+library(DAAG) ## for Cross validation
+library(tree) ## for Regression tree
+library(randomForest) ## for Random forest
+set.seed(1)
+
+#############################################
+
+# Load Data from the working directory
+data <- read.table("uscrime.txt", stringsAsFactors = FALSE, header = TRUE)
+
+head(data)
+
+########### Regression Tree ###########
+
+# Run regression tree 
+reg_tree <- tree(Crime~., data = data)
+summary(reg_tree)
+
+# ------Regression tree: -->
+# ------tree(formula = Crime ~ ., data = data) -->
+# ------Variables actually used in tree construction: -->
+# ------[1] "Po1" "Pop" "LF"  "NW"  -->
+# ------Number of terminal nodes:  7  -->
+# ------Residual mean deviance:  47390 = 1896000 / 40  -->
+# ------Distribution of residuals: -->
+# ------    Min.  1st Qu.   Median     Mean  3rd Qu.     Max.  -->
+# -------573.900  -98.300   -1.545    0.000  110.600  490.100  -->
+
+reg_tree$frame
+
+# Regression tree split
+# ------reg_tree$frame -->
+
+# ------      var  n        dev      yval splits.cutleft splits.cutright -->
+# ------1     Po1 47 6880927.66  905.0851          <7.65           >7.65 -->
+# ------2     Pop 23  779243.48  669.6087          <22.5           >22.5 -->
+# ------4      LF 12  243811.00  550.5000        <0.5675         >0.5675 -->
+# ------8  <leaf>  7   48518.86  466.8571                                -->
+# ------9  <leaf>  5   77757.20  667.6000                                -->
+# ------5  <leaf> 11  179470.73  799.5455                                -->
+# ------3      NW 24 3604162.50 1130.7500          <7.65           >7.65 -->
+# ------6     Pop 10  557574.90  886.9000          <21.5           >21.5 -->
+# ------12 <leaf>  5  146390.80 1049.2000                                -->
+# ------13 <leaf>  5  147771.20  724.6000                                -->
+# ------7     Po1 14 2027224.93 1304.9286          <9.65           >9.65 -->
+# ------14 <leaf>  6  170828.00 1041.0000                                -->
+# ------15 <leaf>  8 1124984.88 1502.8750                                -->
+
+# Plot the Regression tree
+plot(reg_tree)
+text(reg_tree)
+
+# Regression tree pruning reduces the risk of overfitting by verifying the predictive utility of all the nodes of the tree
+# Lets see if pruning the tree improves the performance 
+plot(prune.tree(reg_tree)$size,prune.tree(reg_tree)$dev,type="b")
+prune.tree(reg_tree)$size
+prune.tree(reg_tree)$dev
+
+#Pruning doesnt improve the preformance, so unpruned model is used.
+
+cv.data <- cv.tree(reg_tree)
+cv.data$size
+cv.data$dev
+
+# Large deviance values indicate the overfitting problem with the model
+# Lets see the quality of the model
+regTree_predict <- predict(reg_tree, data = uscrime[,1:15])
+rt_RSS <- sum((regTree_predict - data[,16])^2)
+rt_TSS <- sum((data[,16] - mean(data[,16]))^2)
+rt_R2 <- 1 - rt_RSS/rt_TSS
+rt_R2
+
+########### Random Forest ###########
+# Run the model for varying mtry (number of variables randomly sampled as candidates at each split) and nodesize (minimum size of terminal node)
+df <- data.frame(matrix(nrow = 3,ncol = 3))
+m = 1
+for(ns in 2:15){
+for (sz in 1:20){
+rfm <- randomForest(Crime~., data = data, importance = TRUE, nodesize = ns, mtry = sz)
+rfm_predict <- predict(rfm,data=data[,-16])
+rfm_RSS <- sum((rfm_predict-data[,16])^2)
+rfm_TSS <- sum((data[,16]-mean(data[,16]))^2)
+rfm_R2 <- 1 - rfm_RSS/rfm_TSS
+df[m,1] <- ns
+df[m,2] <- sz
+df[m,3] <- rfm_R2
+m = m+1
+}
+}
+colnames(df) <- c("Node Size", "mtry", "R-Squared Value")
+
+sink("rfm.txt")
+print(df)
+sink()
+
+# Max performance is at nodesize = 5 and mtry = 3
+rfm_final <- randomForest(Crime~., data = data, importance = TRUE, nodesize = 5, mtry = 3)
+importance(rfm_final)
+
+varImpPlot(rfm_final)

@@ -1,0 +1,171 @@
+---
+title: "Question 4.1"
+author: "Maninder Ade"
+date: "1/31/2021"
+output: pdf_document
+---
+
+rm(list = ls())
+library(kknn)
+set.seed(1)
+
+# Load Data from the working directory
+CC_data <- read.table("data 3.1/credit_card_data.txt",header = FALSE,stringsAsFactors = FALSE,sep='\t')
+head(CC_data)
+tail(CC_data)
+
+# function for accuracy
+knn_acc = function(Y){
+  pred <- rep(0,(nrow(CC_data)))
+
+  for (i in 1:nrow(CC_data)){
+    model=kknn(V11~V1+V2+V3+V4+V5+V6+V7+V8+V9+V10,CC_data[-i,],CC_data[i,],k=Y, scale = TRUE) 
+    pred[i] <- as.integer(fitted(model)+0.5) 
+  }
+  accuracy = sum(pred == CC_data[,11]) / nrow(CC_data)
+  return(accuracy)
+}
+# calling to accuracy function for different k values
+acc <- rep(0,50) 
+for (Y in 1:50){
+  acc[Y] = knn_acc(Y) 
+}
+acc_percentages <- as.matrix(acc*100)
+
+plot(1:50,acc_percentages,type="b",xlab="k value",ylab="Accuracy %",las=1,col="red")
+
+## 4.1.a Cross Validation
+# Randomly taking 70% to use for training 
+CC_data70 = sample(nrow(CC_data),round(nrow(CC_data)*0.7))
+CC_train70 = CC_data[CC_data70,]
+
+# Split the remaing into test
+CC_test70 = CC_data[-CC_data70, ]
+ 
+CV_model = train.kknn(V11~V1+V2+V3+V4+V5+V6+V7+V8+V9+V10,CC_train70,kmax=30,scale=TRUE)
+CV_acc <- rep(0,30)
+for (k in 1:30) {
+  CV_model_pred <- as.integer(fitted(CV_model)[[k]][1:nrow(CC_train70)] + 0.5)
+  CV_acc[k] <- sum(CV_model_pred == CC_train70$V11) / nrow(CC_train70)
+}
+
+max(CV_acc)
+which.max(CV_acc)
+
+plot(1:30,as.matrix(CV_acc*100),type="b",xlab="k value",ylab="Accuracy %",las=1,col="red")
+
+# based on the above run it is clear that 6, 15 and 17 k values are optimal; to further understand the model, knn is run with test data with k = 15
+
+CV_test_pred <- rep(0,(nrow(CC_test70)))
+for (i in 1:nrow(CC_test70)){
+    CV_test_model=kknn(V11~V1+V2+V3+V4+V5+V6+V7+V8+V9+V10,CC_test70[-i,],CC_test70[i,],k=15, scale = TRUE) 
+    CV_test_pred[i] <- as.integer(fitted(CV_test_model)+0.5) 
+}
+CV_test_acc = sum(CV_test_pred == CC_test70[,11]) / nrow(CC_test70)
+
+## 4.1.b Training Vvalidation Test
+# Randomly taking 70% to use for training, 15% for validation and 15% for test
+
+# Split the remaing into test
+del = CC_data[-CC_data70,]
+del70 = sample(nrow(del),round(nrow(del)*0.5))
+
+CC_val70 = del[del70,]
+CC_test70 = del[-del70,]
+
+# Running KNN
+TVT_train_acc <- rep(0,20)
+
+# function for accuracy
+knn_acc = function(Y){
+  pred <- rep(0,(nrow(CC_train70)))
+
+  for (i in 1:nrow(CC_train70)){
+    model=kknn(V11~V1+V2+V3+V4+V5+V6+V7+V8+V9+V10,CC_train70[-i,],CC_train70[i,],k=Y, scale = TRUE) 
+    pred[i] <- as.integer(fitted(model)+0.5) 
+  }
+  accuracy = sum(pred == CC_train70[,11]) / nrow(CC_train70)
+  return(accuracy)
+}
+# calling to accuracy function for different k values
+for (Y in 1:20){
+  TVT_train_acc[Y] = knn_acc(Y) 
+}
+TVT_acc_percentages <- as.matrix(TVT_train_acc*100)
+
+plot(1:20,TVT_acc_percentages,type="b",xlab="k value",ylab="Accuracy %",las=1,col="red")
+
+#KNN models with K value 12 to 16 have similar accuracy 84.5%. 
+#Running KNN further with validation set with k values 12,13,14,15 and 16
+
+TVT_val_acc <- rep(0,5)
+
+# function for accuracy
+knn_acc = function(Y){
+  pred <- rep(0,(nrow(CC_val70)))
+
+  for (i in 1:nrow(CC_val70)){
+    model=kknn(V11~V1+V2+V3+V4+V5+V6+V7+V8+V9+V10,CC_val70[-i,],CC_val70[i,],k=Y, scale = TRUE) 
+    pred[i] <- as.integer(fitted(model)+0.5) 
+  }
+  accuracy = sum(pred == CC_val70[,11]) / nrow(CC_val70)
+  return(accuracy)
+}
+# calling to accuracy function for different k values
+for (Y in 12:16){
+  TVT_val_acc[Y] = knn_acc(Y) 
+}
+TVT_valacc_percentages <- as.matrix(TVT_val_acc[12:16]*100)
+
+# K values 12 to 16 performed equally well with accuracy of 86.7%
+# Running KNN on test data with k value 15
+
+TVT_test_pred <- rep(0,(nrow(CC_test70)))
+for (i in 1:nrow(CC_test70)){
+    TVT_test_model=kknn(V11~V1+V2+V3+V4+V5+V6+V7+V8+V9+V10,CC_test70[-i,],CC_test70[i,],k=15, scale = TRUE) 
+    TVT_test_pred[i] <- as.integer(fitted(TVT_test_model)+0.5) 
+}
+TVT_test_acc = sum(TVT_test_pred == CC_test70[,11]) / nrow(CC_test70)
+# true accuracy of the model for knn is achieved at k value from 12 to 16 with 78.6%
+
+#Running SVM
+
+value = c(0.000001,0.00001,0.0001,0.001,0.01,0.1,1,10,100,1000,10000,1000000)
+TVT_svmtrain_acc <- rep(0,length(value))
+
+for (Y in 1:length(value)){
+pred <- rep(0,(nrow(CC_train70)))
+model <- ksvm(as.matrix(CC_train70[,1:10]),as.factor(CC_train70[,11]),type="C-svc",kernel="vanilladot",C=value[Y],scaled=TRUE)
+
+pred <- predict(model,CC_train70[,1:10])
+TVT_svmtrain_acc[Y] <- sum(pred == CC_train70[,11]) / nrow(CC_train70)
+}
+
+#SVM models with C value 0.01,0.1,1,10 and 100 have similar accuracy 86.2%
+# Running SVM at C value 0.01,0.1,1,10 and 100  with validation data
+
+value = c(0.01,0.1,1,10,100)
+TVT_svmval_acc <- rep(0,length(value))
+
+for (Y in 1:length(value)){
+pred <- rep(0,(nrow(CC_val70)))
+model <- ksvm(as.matrix(CC_val70[,1:10]),as.factor(CC_val70[,11]),type="C-svc",kernel="vanilladot",C=value[Y],scaled=TRUE)
+
+pred <- predict(model,CC_val70[,1:10])
+TVT_svmval_acc[Y] <- sum(pred == CC_val70[,11]) / nrow(CC_val70)
+}
+
+# SVM model accuracy is 92.8% at C value 100
+# Running SVM at C value 100 with test data
+
+pred <- rep(0,(nrow(CC_test70)))
+model <- ksvm(as.matrix(CC_test70[,1:10]),as.factor(CC_test70[,11]),type="C-svc",kernel="vanilladot",C=100,scaled=TRUE)
+
+pred <- predict(model,CC_test70[,1:10])
+TVT_svmtest_acc <- sum(pred == CC_test70[,11]) / nrow(CC_test70)
+
+#SVM has provided the best accuracy over test data at C value 100
+
+
+
+

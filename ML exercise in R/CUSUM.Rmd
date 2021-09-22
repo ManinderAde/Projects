@@ -1,0 +1,39 @@
+---
+title: "5.1"
+author: "Maninder Ade"
+date: "02/06/2021"
+output: pdf_document
+---
+
+#############################################
+rm(list = ls())
+library(outliers)
+set.seed(1)
+
+#############################################
+
+# Load Data from the working directory
+data <- read.table("uscrime.txt",header = TRUE, stringsAsFactors = FALSE)
+head(data)
+
+## Summary of the last column in the data (number of crimes per 100,000 people)
+summary(data[,16])
+
+# Following are the observations:
+## Min ##### 1st Quartile ##### Median #####  Mean  #####3rd Quartile #####  Max  ##
+## 342 #####    658.5     #####  831   ##### 905.1  #####   1057.5    ##### 1993  ##
+
+grubbs.result <- grubbs.test(data[,16], type = 11, opposite = FALSE, two.sided = FALSE)
+outlier1 <- c(as.numeric(strsplit(grubbs.result$alternative," ")[[1]][1]))
+outlier2 <- c(as.numeric(strsplit(grubbs.result$alternative," ")[[1]][3]))
+Outliers <- c(outlier1,outlier2)
+
+hist(data[,16], main = "Histogram of Crimes Data With Boxplot" ,xlab="crimes per 100,000 people",ylab="Count",las=1)
+par(new=TRUE)
+boxplot(data[,16], col = "green", border = "brown", horizontal = TRUE, notch = TRUE, axes = F)
+par(new=T)
+plot(Outliers,c(6,6),pch=19,col="red",axes=F,horizontal = T,xlab="",ylab="")
+
+
+
+ 

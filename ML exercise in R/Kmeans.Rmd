@@ -1,0 +1,60 @@
+---
+title: "Question4.2"
+author: "Maninder Ade"
+date: "1/31/2021"
+output: pdf_document
+---
+
+rm(list = ls())
+library(kernlab)
+set.seed(1)
+
+# Load Data from the R database
+data("iris")
+head(iris)
+tail(iris)
+
+summary(iris)
+
+pred <- iris[,c(1,2,3,4)]
+class <- iris$Species
+
+# Finding the best k value
+wss1 <- vector("numeric",15)
+wss2 <- vector("numeric",15)
+# Without iteration
+for (i in 1:15) {
+wss1[i] <- sum(kmeans(pred,i)$withinss)
+}
+# With iteration
+for (i in 1:15) {
+wss2[i] <- sum(kmeans(pred,i,nstart=20,iter.max=20)$withinss)
+}
+
+plot(1:15,wss1,type="b",xlab="No. of Clusters",ylab="Within group sum of squares",las=1,col="red")
+par(new=TRUE)
+plot(1:15,wss2,type="b",xlab="No. of Clusters",ylab="Within group sum of squares",las=1,col="blue")
+
+legend(11,700,legend=c("Without iteration","With iteration"),col=c("blue","red"),pch=c("o","o"),lty=c(1,2), ncol=1)
+
+# k value of 3 is optimal solution
+results <- kmeans(pred,3)
+table(results$cluster,class)
+
+# plots based on before kmeans
+pairs(pred, main = "Iris data before kmeans",pch = 21, bg = c("red", "green3","blue")[unclass(class)])
+
+# plots based on after kmeans
+pairs(pred, main = "Iris data after kmeans with all predictors",pch = 21, bg = c("red", "green3","blue")[unclass(results$cluster)])
+
+# finding the best combination of predictors 
+# based on scatter plots sepal.length, petal.length and petal.width are considered
+results_1_4 <- kmeans(pred[,c(1,4)],3)
+table1 <- table(results_1_4$cluster,class)
+
+results_3_4 <- kmeans(pred[,3:4],3)
+table2 <- table(results_3_4$cluster,class)
+
+# plots based on after kmeans
+pairs(pred, main = "Iris data after kmeans with petal.length and petal.width",pch = 21, bg = c("blue", "green3","red")[unclass(results_3_4$cluster)])
+

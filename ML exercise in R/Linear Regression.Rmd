@@ -1,0 +1,101 @@
+---
+title: "8.2"
+author: "Maninder Ade"
+date: "02/18/2021"
+output: pdf_document
+---
+
+#############################################
+rm(list = ls())
+set.seed(1)
+
+#############################################
+
+# Load Data from the working directory
+data <- read.table("uscrime.txt",header = TRUE, stringsAsFactors = FALSE)
+
+head(data)
+
+## Running Linear Regression using all variables
+
+lm_model1 <- lm(Crime~., data)
+
+# Save results into a text file
+sink("lm_model1.txt")
+print(summary(lm_model1))
+sink()
+
+
+# Creating test data point to predict crime rate using the linear regression model
+test_point <- data.frame(M = 14.0, So = 0, Ed = 10.0, Po1 = 12.0, Po2 = 15.5, LF = 0.640, M.F = 94.0, Pop = 150, NW = 1.1, U1 = 0.120, U2 = 3.6, Wealth = 3200, Ineq = 20.1, Prob = 0.04, Time = 39.0)
+
+pred_test_point1 <- predict(lm_model1,test_point)
+
+# Predicted crime rate for the test data point is 155.4349
+# it is clear from the summary above is half of the lowest crime rate
+
+sink("uscrime_data_summary.txt")
+print(summary(data))
+sink()
+
+## from the summary of the data it is evident that the test data points are within the modeled data points. so it is clear that the model is overfit and from the results there are independent variables that are insignificant. Before we select the variables, lets check for multicollinearity
+
+## Checking for multicollinearity - check the correlation matrix if values are greater than 0.9
+cor_results <- cor(data)
+
+# Save results into a text file
+sink("coeff_correlation_matrix.txt")
+print(cor_results)
+sink()
+
+# Based on above matrix Po1 (per capita expenditure on police protection in 1960) and Po2 (per capita expenditure on police protection in 1959) are correlated
+
+## Running Linear Regression using all variables except Po2
+lm_model2 <- lm(Crime ~ M+So+Ed+Po1+LF+M.F+Pop+NW+U1+U2+Wealth+Ineq+Prob+Time,data)
+
+sink("lm_model2.txt")
+print(summary(lm_model2))
+sink()
+
+pred_test_point2 <- predict(lm_model2,test_point)
+
+# Predicted crime rate for the test data point is 724.8202
+# the predicted crime rate is more reasonable now
+
+## Still the model is overfit and from the results there are independent variables that are insignificant
+
+# linear model is re-run with p value <=0.05
+lm_model3 <- lm(Crime ~ M+Ed+Po1+U2+Ineq,data)
+
+sink("lm_model3.txt")
+print(summary(lm_model3))
+sink()
+
+pred_test_point3 <- predict(lm_model3,test_point)
+# Predicted crime rate for the test data point is 1299.626
+
+
+library(DAAG)
+
+#To better understand the quality of the model cross validation is done
+
+par(mfrow = c(1, 1))
+c1 = cv.lm(data, lm_model1, m = 5)
+c2 = cv.lm(data, lm_model2, m = 5)
+c3 = cv.lm(data, lm_model3, m = 5)
+
+# calculating R^2 for CV models
+
+SStot = sum((data$Crime - mean(data$Crime)) ^ 2)
+
+SSc1 = attr(c1, "ms")*nrow(data)
+SSc2 = attr(c2, "ms")*nrow(data)
+SSc3 = attr(c3, "ms")*nrow(data)
+
+R2_cvm1 = 1 - SSc1 / SStot
+R2_cvm2 = 1 - SSc2 / SStot
+R2_cvm3 = 1 - SSc3 / SStot
+R2_cvm1
+R2_cvm2
+R2_cvm3
+ 

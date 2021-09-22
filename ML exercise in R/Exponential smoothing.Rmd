@@ -1,0 +1,75 @@
+---
+title: "7.2"
+author: "Maninder Ade"
+date: "02/06/2021"
+output: pdf_document
+---
+
+#############################################
+rm(list = ls())
+set.seed(1)
+
+#############################################
+
+# Load Data from the working directory
+data <- read.table("temps.txt",header = TRUE, stringsAsFactors = FALSE)
+head(data)
+
+summary(data)
+
+
+# Convert data to time series
+data_series <- as.vector(unlist(data[,2:21]))
+temp_series <- ts(data_series, start=1996, frequency = 123 )
+
+plot.ts( temp_series, ylab = "Temperature (F)", col = "blue")
+
+#############################################
+########### Exponential Smoothing ###########
+#############################################
+
+# Single Exponential Smoothing
+
+ES_A <- HoltWinters(temp_series, beta = F, gamma = F)
+ES_A
+
+#Smoothing parameters:
+# alpha: 0.8388021
+# beta : FALSE
+# gamma: FALSE
+# SSE: 56198.1
+
+# Double Exponential Smoothing
+ES_AB <- HoltWinters(temp_series, gamma = F)
+ES_AB$SSE
+
+#Smoothing parameters:
+# alpha: 0.8445729
+# beta : 0.003720884
+# gamma: FALSE
+# SSE: 56572.54
+
+# Triple Exponential Smoothing (HoltWinters) with additive seasonal factor
+ES_ABG1 <- HoltWinters(temp_series, seasonal = "a")
+ES_ABG1
+
+#Smoothing parameters:
+# alpha: 0.6610618
+# beta : 0
+# gamma: 0.6248076
+# SSE: 66244.25
+
+# Triple Exponential Smoothing (HoltWinters) with mulitplicative seasonal factor
+ES_ABG2 <- HoltWinters(temp_series, seasonal = "m")
+ES_ABG2
+
+#Smoothing parameters:
+# alpha: 0.615003
+# beta : 0
+# gamma: 0.5495256
+# SSE: 68904.57
+
+CUSUM_data = data.frame( data$DAY, ES_ABG2$fitted )
+write.csv( CUSUM_data, file = "fitted_data.csv" )
+
+

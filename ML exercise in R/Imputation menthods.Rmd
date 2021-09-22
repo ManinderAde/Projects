@@ -1,0 +1,258 @@
+---
+title: '14.1'
+author: "Maninder"
+date: "3/23/2021"
+output: html_document
+---
+#############################################
+
+rm(list = ls())
+library(kknn)
+set.seed(143)
+
+#############################################
+
+# Load Data from the working directory
+data <- read.table("breast-cancer-wisconsin.data.txt", stringsAsFactors = FALSE, header = FALSE, sep = ",",col.names = c("id_number","Clump_Thickness","Uniformity_Cell_Size","Uniformity_Cell_Shape","Marginal_Adhesion","Single_Epithelial_Cell_Size","Bare_Nuclei","Bland_Chromatin","Normal_Nucleoli","Mitoses","Class"),na.strings="?")
+
+# Return the column names containing missing observations
+list_na <- colnames(data)[ apply(data, 2, anyNA) ]
+
+# Replace Class column with Malignant = 1 and Benign = 0
+require(dplyr)
+data <- data %>%
+      mutate(Class = ifelse(Class == 4,1,0))
+
+data[is.na(data$Bare_Nuclei),]
+
+# To use imputation method, missing data should be not more than 5%
+# Observed percentage of missing data is 2.3%
+missing_per <- sum(is.na(data$Bare_Nuclei))/nrow(data)
+missing_ind <- which(is.na(data$Bare_Nuclei))
+
+###### Mean Imputation ######
+average_missing <- apply(data[,colnames(data) %in% list_na,drop=F],2,mean,na.rm =  TRUE)
+average_missing ##3.544656
+
+data_mean <- data
+data_mean[missing_ind,]$Bare_Nuclei <- average_missing
+data_mean$Bare_Nuclei <- as.integer(data_mean$Bare_Nuclei)
+
+###### Mode Imputation ######
+# Create the mode function.
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+mode_missing <- getmode(data$Bare_Nuclei)
+mode_missing ##1
+
+data_mode <- data
+data_mode[missing_ind,]$Bare_Nuclei <- mode_missing
+data_mode$Bare_Nuclei <- as.integer(data_mode$Bare_Nuclei)
+
+###### Regression Imputation ######
+#Linear Model
+model <- lm(Bare_Nuclei~Clump_Thickness+Uniformity_Cell_Size+Uniformity_Cell_Shape+Marginal_Adhesion+Single_Epithelial_Cell_Size+Bland_Chromatin+Normal_Nucleoli+Mitoses,data = data[-missing_ind,2:10])
+summary(model)
+#Call:
+#lm(formula = Bare_Nuclei ~ Clump_Thickness + Uniformity_Cell_Size + 
+#    Uniformity_Cell_Shape + Marginal_Adhesion + Single_Epithelial_Cell_Size + 
+#    Bland_Chromatin + Normal_Nucleoli + Mitoses, data = data[-missing_ind, 
+#    2:10])
+
+#Residuals:
+#    Min      1Q  Median      3Q     Max 
+#-9.7316 -0.9426 -0.3002  0.6725  8.6998 
+#
+#Coefficients:
+#                             Estimate Std. Error t value Pr(>|t|)    
+#(Intercept)                 -0.616652   0.194975  -3.163  0.00163 ** 
+#Clump_Thickness              0.230156   0.041691   5.521 4.83e-08 ***
+#Uniformity_Cell_Size        -0.067980   0.076170  -0.892  0.37246    
+#Uniformity_Cell_Shape        0.340442   0.073420   4.637 4.25e-06 ***
+#Marginal_Adhesion            0.339705   0.045919   7.398 4.13e-13 ***
+#Single_Epithelial_Cell_Size  0.090392   0.062541   1.445  0.14883    
+#Bland_Chromatin              0.320577   0.059047   5.429 7.91e-08 ***
+#Normal_Nucleoli              0.007293   0.044486   0.164  0.86983    
+#Mitoses                     -0.075230   0.059331  -1.268  0.20524    
+#---
+#Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+#Residual standard error: 2.274 on 674 degrees of freedom
+#Multiple R-squared:  0.615,	Adjusted R-squared:  0.6104 
+#F-statistic: 134.6 on 8 and 674 DF,  p-value: < 2.2e-16
+
+
+# stepwise regression model in selecting variables
+lt_AIC <- step(model, method='lmStepAIC',direction = "backward",trace = FALSE)
+summary(lt_AIC)
+
+#Call:
+#lm(formula = Bare_Nuclei ~ Clump_Thickness + Uniformity_Cell_Shape + 
+#    Marginal_Adhesion + Bland_Chromatin, data = data[-missing_ind, 
+#    2:10])
+
+#Residuals:
+#    Min      1Q  Median      3Q     Max 
+#-9.8115 -0.9531 -0.3111  0.6678  8.6889 
+
+#Coefficients:
+#                      Estimate Std. Error t value Pr(>|t|)    
+#(Intercept)           -0.53601    0.17514  -3.060   0.0023 ** 
+#Clump_Thickness        0.22617    0.04121   5.488 5.75e-08 ***
+#Uniformity_Cell_Shape  0.31729    0.05086   6.239 7.76e-10 ***
+#Marginal_Adhesion      0.33227    0.04431   7.499 2.03e-13 ***
+#Bland_Chromatin        0.32378    0.05606   5.775 1.17e-08 ***
+#---
+#Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+#Residual standard error: 2.274 on 678 degrees of freedom
+#Multiple R-squared:  0.6129,	Adjusted R-squared:  0.6107 
+#F-statistic: 268.4 on 4 and 678 DF,  p-value: < 2.2e-16
+
+model2 <- lm(formula = Bare_Nuclei ~ Clump_Thickness + Uniformity_Cell_Shape + Marginal_Adhesion + Bland_Chromatin, data = data[-missing_ind,2:10])
+summary(model2)
+
+#Call:
+#lm(formula = Bare_Nuclei ~ Clump_Thickness + Uniformity_Cell_Shape + 
+#    Marginal_Adhesion + Bland_Chromatin, data = data[-missing_ind, 
+#    2:10])
+
+#Residuals:
+#    Min      1Q  Median      3Q     Max 
+#-9.8115 -0.9531 -0.3111  0.6678  8.6889 
+
+#Coefficients:
+#                      Estimate Std. Error t value Pr(>|t|)    
+#(Intercept)           -0.53601    0.17514  -3.060   0.0023 ** 
+#Clump_Thickness        0.22617    0.04121   5.488 5.75e-08 ***
+#Uniformity_Cell_Shape  0.31729    0.05086   6.239 7.76e-10 ***
+#Marginal_Adhesion      0.33227    0.04431   7.499 2.03e-13 ***
+#Bland_Chromatin        0.32378    0.05606   5.775 1.17e-08 ***
+#---
+#Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+#Residual standard error: 2.274 on 678 degrees of freedom
+#Multiple R-squared:  0.6129,	Adjusted R-squared:  0.6107 
+#F-statistic: 268.4 on 4 and 678 DF,  p-value: < 2.2e-16
+
+# All values are significant
+# Use CV method to understand the model quality
+library(DAAG)
+cv_model <- cv.lm(data[-missing_ind,2:10], model2, m=5)
+TSS <- sum((as.numeric(data[-missing_ind,]$Bare_Nuclei) - mean(as.numeric(data[-missing_ind,]$Bare_Nuclei)))^2)
+R2 <- 1 - attr(cv_model,"ms")*nrow(data[-missing_ind,])/TSS
+R2 #0.608
+
+data_reg <- data
+data_reg[missing_ind,]$Bare_Nuclei <- predict(model2,newdata=data[missing_ind,])
+data_reg$Bare_Nuclei <- as.integer(data_reg$Bare_Nuclei)
+
+# As Bare_Nuclei values are integers between 1 and 10, lets correct them
+data_reg$Bare_Nuclei[data_reg$Bare_Nuclei<1] <- 1
+data_reg$Bare_Nuclei[data_reg$Bare_Nuclei>10] <- 10
+
+###### Regression with Perturbation Imputation ######
+missing_pred <- predict(model2,newdata=data[missing_ind,])
+# predicting the missing values through a random normal distriubtion with means and the standard deviation of the predicted values.
+
+missing_pred_pert <- rnorm(length(missing_pred),missing_pred,sd(missing_pred))
+#6.9356  3.1438  0.0858 -0.7897  0.9571  3.3180  0.7916 -0.5771  6.7989
+#  7.7664  2.7858  2.9856  6.4849  3.8058 -0.7303 -1.5784
+
+
+data_reg_pert <- data
+data_reg_pert[missing_ind,]$Bare_Nuclei <- missing_pred_pert
+data_reg_pert$Bare_Nuclei <- as.integer(data_reg_pert$Bare_Nuclei)
+
+# As Bare_Nuclei values are integers between 1 and 10, lets correct them
+data_reg_pert$Bare_Nuclei[data_reg_pert$Bare_Nuclei<1] <- 1
+data_reg_pert$Bare_Nuclei[data_reg_pert$Bare_Nuclei>10] <- 10
+
+###### KNN Model ######
+
+# KNN Model is run for all mean imputation, mode imputation, regression imputation, regression with perturbation imputation, excluding missing values and data set when a binary variable is introduced to indicate missing values
+
+# split data into 70% training and 30% for test
+training <- sample(nrow(data),size=floor(0.7*nrow(data)))
+test <- setdiff(seq_len(nrow(data)),training)
+
+acc1 <- rep(0,10)
+acc2 <- rep(0,10)
+acc3 <- rep(0,10)
+acc4 <- rep(0,10)
+acc5 <- rep(0,10)
+acc6 <- rep(0,10)
+
+#mean imp
+for (i in 1:10){
+knn1 <- kknn(Class~Clump_Thickness+Uniformity_Cell_Size+Uniformity_Cell_Shape+Marginal_Adhesion+Single_Epithelial_Cell_Size+Bland_Chromatin+Normal_Nucleoli+Mitoses+Bare_Nuclei, data_mean[training,],data_mean[test,],k=i)
+
+pred <- as.integer(fitted(knn1)+0.5) #round-off
+acc1[i] = sum(pred == data_mean[test,]$Class) / nrow(data_mean[test,])
+
+}
+
+#mode imp
+for (i in 1:10){
+knn2 <- kknn(Class~Clump_Thickness+Uniformity_Cell_Size+Uniformity_Cell_Shape+Marginal_Adhesion+Single_Epithelial_Cell_Size+Bland_Chromatin+Normal_Nucleoli+Mitoses+Bare_Nuclei, data_mode[training,],data_mode[test,],k=i)
+
+pred <- as.integer(fitted(knn2)+0.5) #round-off
+acc2[i] = sum(pred == data_mode[test,]$Class) / nrow(data_mode[test,])
+
+}
+
+#reg imp
+for (i in 1:10){
+knn3 <- kknn(Class~Clump_Thickness+Uniformity_Cell_Size+Uniformity_Cell_Shape+Marginal_Adhesion+Single_Epithelial_Cell_Size+Bland_Chromatin+Normal_Nucleoli+Mitoses+Bare_Nuclei, data_reg[training,],data_reg[test,],k=i)
+
+pred <- as.integer(fitted(knn3)+0.5) #round-off
+acc3[i] = sum(pred == data_reg[test,]$Class) / nrow(data_reg[test,])
+
+}
+
+#reg pert imp
+for (i in 1:10){
+knn4 <- kknn(Class~Clump_Thickness+Uniformity_Cell_Size+Uniformity_Cell_Shape+Marginal_Adhesion+Single_Epithelial_Cell_Size+Bland_Chromatin+Normal_Nucleoli+Mitoses+Bare_Nuclei, data_reg[training,],data_reg[test,],k=i)
+
+pred <- as.integer(fitted(knn4)+0.5) #round-off
+acc4[i] = sum(pred == data_reg[test,]$Class) / nrow(data_reg[test,])
+
+}
+
+# using intersect function to calculate the intersection of subsets of a probability space
+training_missing <- setdiff(training, intersect(missing_ind,training))
+test_missing <- setdiff(test, intersect(missing_ind,test))
+
+#exclude missing values
+for (i in 1:10){
+knn5 <- kknn(Class~Clump_Thickness+Uniformity_Cell_Size+Uniformity_Cell_Shape+Marginal_Adhesion+Single_Epithelial_Cell_Size+Bland_Chromatin+Normal_Nucleoli+Mitoses+Bare_Nuclei, data[training_missing,],data[test_missing,],k=i)
+
+pred <- as.integer(fitted(knn5)+0.5) #round-off
+acc5[i] = sum(pred == data[test_missing,]$Class) / nrow(data[test_missing,])
+
+}
+
+# creating dummy variable i.e., a binary variable is introduced to indicate missing values
+data_dummy <- data
+data_dummy$dummy[missing_ind] <- 0
+data_dummy$dummy[-missing_ind] <- as.integer(data[-missing_ind,]$Bare_Nuclei)
+
+#dummy variable
+for (i in 1:10){
+knn6 <- kknn(Class~Clump_Thickness+Uniformity_Cell_Size+Uniformity_Cell_Shape+Marginal_Adhesion+Single_Epithelial_Cell_Size+Bland_Chromatin+Normal_Nucleoli+Mitoses+dummy, data_dummy[training,],data_dummy[test,],k=i)
+
+pred <- as.integer(fitted(knn6)+0.5) #round-off
+acc6[i] = sum(pred == data_dummy[test,]$Class) / nrow(data_dummy[test,])
+
+}
+
+knn <- seq(1,10,1)
+plot(knn,acc1,type="l",col="red") #,type="l",col="red"
+lines(knn,acc2,type="l",col="green")
+lines(knn,acc3,type="l",col="orange")
+lines(knn,acc4,type="l",col="blue")
+lines(knn,acc5,type="l",col="magenta")
+lines(knn,acc6)
+

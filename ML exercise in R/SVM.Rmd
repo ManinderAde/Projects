@@ -1,0 +1,170 @@
+---
+title: "Question2.2"
+author: "Maninder Ade"
+date: "1/27/2021"
+output: html_document
+---
+
+rm(list = ls())
+library(kernlab)
+set.seed(1)
+
+# Load Data from the working directory
+CC_data <- read.table("data/credit_card_data.txt",header = FALSE,stringsAsFactors = FALSE,sep='\t')
+head(CC_data)
+tail(CC_data)
+
+# 2.2.1 Run SVM model using vanilldot function from kernel
+Accuracy <- vector("numeric",6)
+C <- vector("character",6)
+
+## Input data in matrix format, C=0.00001
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="vanilladot",C=0.00001,scaled=TRUE)
+a_1 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_1 <- model@b
+pred_1 <- predict(model,CC_data[,1:10])
+accuracy_1 <- sum(pred_1 == CC_data[,11]) / nrow(CC_data)
+Accuracy[1] <- accuracy_1
+C[1] <- "0.0001"
+
+## Input data in matrix format, C=0.01
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="vanilladot",C=0.01,scaled=TRUE)
+a_2 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_2 <- model@b
+pred_2 <- predict(model,CC_data[,1:10])
+accuracy_2 <- sum(pred_2 == CC_data[,11]) / nrow(CC_data)
+Accuracy[2] <- accuracy_2
+C[2] <- "0.001"
+
+## Input data in matrix format, C=10
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="vanilladot",C=10,scaled=TRUE)
+a_3 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_3 <- model@b
+pred_3 <- predict(model,CC_data[,1:10])
+accuracy_3 <- sum(pred_3 == CC_data[,11]) / nrow(CC_data)
+Accuracy[3] <- accuracy_3
+C[3] <- "10"
+
+## Input data in matrix format, C=100
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="vanilladot",C=100,scaled=TRUE)
+a_4 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_4 <- model@b
+pred_4 <- predict(model,CC_data[,1:10])
+accuracy_4 <- sum(pred_4 == CC_data[,11]) / nrow(CC_data)
+Accuracy[4] <- accuracy_4
+C[4] <- "100"
+
+## Input data in matrix format, C=10000
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="vanilladot",C=10000,scaled=TRUE)
+a_5 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_5 <- model@b
+pred_5 <- predict(model,CC_data[,1:10])
+accuracy_5 <- sum(pred_5 == CC_data[,11]) / nrow(CC_data)
+Accuracy[5] <- accuracy_5
+C[5] <- "10000"
+
+## Input data in matrix format, C=1000000
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="vanilladot",C=1000000,scaled=TRUE)
+a_6 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_6 <- model@b
+pred_6 <- predict(model,CC_data[,1:10])
+accuracy_6 <- sum(pred_6 == CC_data[,11]) / nrow(CC_data)
+Accuracy[6] <- accuracy_6
+C[6] <- "1000000"
+
+## Plot C Vs Accuracy
+plot(C, Accuracy, main="C vs Accuracy",
+   xlab="Cost (C) ", ylab="Accuracy ", pch=19)
+   
+# 2.2.3 Run SVM model using different functions from kernel
+Accuracy_Model <- vector("numeric",8)
+Model_name <- vector("character",8)
+
+Accuracy_Model[1] <- accuracy_4
+Model_name[1] <- "vanilladot"
+
+## Input data in matrix format, kernel rdfdot
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="rbfdot",C=100,scaled=TRUE)
+a_7 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_7 <- model@b
+pred_7 <- predict(model,CC_data[,1:10])
+accuracy_7 = sum(pred_7 == CC_data[,11]) / nrow(CC_data)
+Accuracy_Model[2] <- accuracy_7
+Model_name[2] <- "rdfdot"
+
+## Input data in matrix format, kernel polydot
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="polydot",C=100,scaled=TRUE)
+a_8 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_8 <- model@b
+pred_8 <- predict(model,CC_data[,1:10])
+accuracy_8 = sum(pred_8 == CC_data[,11]) / nrow(CC_data)
+Accuracy_Model[3] <- accuracy_8
+Model_name[3] <- "polydot"
+
+## Input data in matrix format, kernel tanhdot
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="tanhdot",C=100,scaled=TRUE)
+a_9 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_9 <- model@b
+pred_9 <- predict(model,CC_data[,1:10])
+accuracy_9 = sum(pred_9 == CC_data[,11]) / nrow(CC_data)
+Accuracy_Model[4] <- accuracy_9
+Model_name[4] <- "tanhdot"
+
+## Input data in matrix format, kernel laplacedot
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="laplacedot",C=100,scaled=TRUE)
+a_10 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_10 <- model@b
+pred_10 <- predict(model,CC_data[,1:10])
+accuracy_10 = sum(pred_10 == CC_data[,11]) / nrow(CC_data)
+Accuracy_Model[5] <- accuracy_10
+Model_name[5] <- "laplacedot"
+
+## Input data in matrix format, kernel besseldot
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="besseldot",C=100,scaled=TRUE)
+a_11 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_11 <- model@b
+pred_11 <- predict(model,CC_data[,1:10])
+accuracy_11 = sum(pred_11 == CC_data[,11]) / nrow(CC_data)
+Accuracy_Model[6] <- accuracy_11
+Model_name[6] <- "besseldot"
+
+## Input data in matrix format, kernel anovadot
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="anovadot",C=100,scaled=TRUE)
+a_12 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_12 <- model@b
+pred_12 <- predict(model,CC_data[,1:10])
+accuracy_12 = sum(pred_12 == CC_data[,11]) / nrow(CC_data)
+Accuracy_Model[7] <- accuracy_12
+Model_name[7] <- "anovadot"
+
+## Input data in matrix format, kernel splinedot
+model <- ksvm(as.matrix(CC_data[,1:10]),as.factor(CC_data[,11]),type="C-svc",kernel="splinedot",C=100,scaled=TRUE)
+a_13 <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a0_13 <- model@b
+pred_13 <- predict(model,CC_data[,1:10])
+accuracy_13 = sum(pred_13 == CC_data[,11]) / nrow(CC_data)
+Accuracy_Model[8] <- accuracy_13
+Model_name[8] <- "splinedot"
+
+## Plot Model vs Accuracy
+barplot(Accuracy_Model, main="Model vs Accuracy",
+   names.arg=Model_name, horiz=FALSE, las=2,ylab="Accuracy")
+
+# 2.2.3 Run kknn model using vanilldot function from kernel
+library(kknn)
+
+K <- seq(5,20,1)
+
+model_value <- rep(0,length(CC_data))
+acc <- rep(0,length(k))
+
+for (index in 1:length(k)){
+kValue <- K[index]
+for (ind in 1:length(CC_data)){
+model_knn = kknn(V11~V1+V2+V3+V4+V5+V6+V7+V8+V9+V10,                      CC_data[-ind,],CC_data[ind,],k=kValue,distance = 2, kernel = "optimal",scale=TRUE)
+model_value <- fitted.values(model_knn)
+}
+acc[index] <- sum(model_value == CC_data[,11])/nrow(CC_data)
+}
+
+plot(acc)
